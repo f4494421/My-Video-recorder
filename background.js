@@ -1,7 +1,7 @@
 let injectedTabs = {};
 
 // 定义版本和API URL常量
-const CURRENT_VERSION = '2.0.0';
+const CURRENT_VERSION = '2.1.0';
 const GITEE_API_URL = 'https://gitee.com/api/v5/repos/mishimengzhong/codeleaner/releases/latest';
 const GITEE_RELEASES_URL = 'https://gitee.com/mishimengzhong/codeleaner/releases';
 
