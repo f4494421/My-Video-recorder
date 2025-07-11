@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <title>升级指南</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .step {
+            background: #f5f5f5;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+
+        .download-btn {
+            background: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .version-info {
+            background: #e8f5e8;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>My Video Recorder 升级指南</h1>
+
+    <div class="version-info">
+        <h3>最新版本：v1.0.1</h3>
+        <p>修复了合并冲突和语法错误，提升了稳定性。</p>
+    </div>
+
+    <h2>升级步骤</h2>
+
+    <div class="step">
+        <h3>步骤1：下载新版本</h3>
+        <p>点击下方按钮下载最新版本：</p>
+        <button class="download-btn" onclick="downloadLatest()">下载最新版本</button>
+    </div>
+
+    <div class="step">
+        <h3>步骤2：删除旧版本</h3>
+        <p>1. 打开Chrome浏览器</p>
+        <p>2. 进入 chrome://extensions/</p>
+        <p>3. 找到"My Video Recorder"</p>
+        <p>4. 点击"删除"按钮</p>
+    </div>
+
+    <div class="step">
+        <h3>步骤3：安装新版本</h3>
+        <p>1. 解压下载的文件</p>
+        <p>2. 在 chrome://extensions/ 页面</p>
+        <p>3. 开启"开发者模式"</p>
+        <p>4. 点击"加载已解压的扩展程序"</p>
+        <p>5. 选择解压后的文件夹</p>
+    </div>
+
+    <div class="step">
+        <h3>步骤4：验证升级</h3>
+        <p>1. 点击扩展图标</p>
+        <p>2. 检查版本号是否为 v1.0.1</p>
+        <p>3. 测试录制功能是否正常</p>
+    </div>
+
+    <script>
+        function downloadLatest() {
+            // 替换为您的Gitee发布页面链接
+            window.open('https://gitee.com/mishimengzhong/codeleaner/releases', '_blank');
+        }
+    </script>
+</body>
+
+</html>

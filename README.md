@@ -197,7 +197,7 @@ const recorder = new MediaRecorder(stream, {
 
 ## 更新日志
 
-### v1.0.0
+### v2.0.0
 
 - ✅ 基础录制功能
 - ✅ 多标签页选择

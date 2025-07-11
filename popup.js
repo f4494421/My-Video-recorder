@@ -64,3 +64,15 @@ if (checkUpdateBtn) {
         }, 3000);
     };
 }
+
+// 在 popup.js 中添加升级功能
+const manualUpdateBtn = document.getElementById('manualUpdate');
+if (manualUpdateBtn) {
+    manualUpdateBtn.onclick = () => {
+        // 打开Gitee发布页面
+        chrome.tabs.create({
+            url: 'https://gitee.com/mishimengzhong/codeleaner/releases'
+        });
+        window.close();
+    };
+}

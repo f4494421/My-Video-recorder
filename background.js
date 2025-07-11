@@ -1,5 +1,10 @@
 let injectedTabs = {};
 
+// 定义版本和API URL常量
+const CURRENT_VERSION = '2.0.0';
+const GITEE_API_URL = 'https://gitee.com/api/v5/repos/mishimengzhong/codeleaner/releases/latest';
+const GITEE_RELEASES_URL = 'https://gitee.com/mishimengzhong/codeleaner/releases';
+
 const recordIcons = {
     16: "icon_record_16.png",
     32: "icon_record_32.png",
@@ -62,25 +67,42 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
 });
 
-// 版本检查和升级提示
-const CURRENT_VERSION = '1.0.0';
-const UPDATE_CHECK_URL = 'https://api.github.com/repos/your-username/your-repo/releases/latest';
+// 添加版本存储和检测
+chrome.runtime.onInstalled.addListener(() => {
+    chrome.storage.local.set({
+        version: CURRENT_VERSION,
+        lastCheck: Date.now()
+    });
+});
 
+// 修改升级检测函数
 function checkForUpdates() {
-    fetch(UPDATE_CHECK_URL)
-        .then(response => response.json())
-        .then(data => {
-            const latestVersion = data.tag_name.replace('v', '');
-            if (latestVersion !== CURRENT_VERSION) {
-                showUpdateNotification(latestVersion, data.html_url);
-            }
-        })
-        .catch(error => {
-            console.log('版本检查失败:', error);
-        });
+    const now = Date.now();
+    const oneDay = 24 * 60 * 60 * 1000;
+
+    chrome.storage.local.get(['lastCheck'], (result) => {
+        if (!result.lastCheck || (now - result.lastCheck) > oneDay) {
+            // 执行升级检测
+            fetch(GITEE_API_URL)
+                .then(response => response.json())
+                .then(data => {
+                    if (data && data.tag_name) {
+                        const latestVersion = data.tag_name.replace('v', '');
+                        if (latestVersion !== CURRENT_VERSION) {
+                            showUpdateNotification(latestVersion, data.html_url, data.body);
+                        }
+                    }
+                    // 更新检查时间
+                    chrome.storage.local.set({ lastCheck: now });
+                })
+                .catch(error => {
+                    console.log('版本检查失败:', error);
+                });
+        }
+    });
 }
 
-function showUpdateNotification(version, downloadUrl) {
+function showUpdateNotification(version, downloadUrl, releaseNotes) {
     chrome.notifications.create({
         type: 'basic',
         iconUrl: 'icon_record_48.png',
