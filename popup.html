@@ -69,18 +69,30 @@
             font-size: 12px;
             color: #2e7d32;
         }
+
+        footer {
+            text-align: center;
+            padding: 10px;
+            border-top: 1px solid #eee;
+            margin-top: 10px;
+        }
+
+        footer span {
+            font-size: 12px;
+            color: #888;
+        }
     </style>
 </head>
 
 <body>
     <div class="header-bar">
         <span class="header-title">选择要录屏的页面</span>
-        <button id="recordCurrentTab">录制当前标签页</button>
+        <button id="recordCurrentTab" aria-label="录制当前标签页">录制当前标签页</button>
     </div>
     <ul class="tab-list" id="tabList"></ul>
-    <div style="text-align:center;padding:10px;border-top:1px solid #eee;margin-top:10px;">
-        <span style="font-size:12px;color:#888;">版本 v2.1.0</span>
-    </div>
+    <footer>
+        <span>版本 v3.0.0</span>
+    </footer>
     <script src="popup.js"></script>
 </body>
 

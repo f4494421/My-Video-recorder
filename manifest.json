@@ -1,17 +1,15 @@
 {
     "manifest_version": 3,
     "name": "My Video Recorder",
-    "version": "2.1.0",
+    "version": "3.0.0",
     "description": "录制网页视频的专属插件",
     "permissions": [
         "scripting",
         "activeTab",
-        "notifications",
         "storage"
     ],
     "host_permissions": [
-        "<all_urls>",
-        "https://gitee.com/*"
+        "<all_urls>"
     ],
     "background": {
         "service_worker": "background.js"
