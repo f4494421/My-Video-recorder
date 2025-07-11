@@ -4,7 +4,7 @@ class SegmentRecorder {
         this.segments = [];           // 存储所有片段
         this.currentSegment = 0;      // 当前片段编号
         this.recordingStartTime = 0;  // 总录制开始时间
-        this.segmentDuration = 30 * 60 * 1000; // 30分钟一段
+        this.segmentDuration = 2 * 60 * 1000; // 2分钟一段 1000毫秒
         this.isRecording = false;
         this.recorder = null;
         this.stream = null;
@@ -124,41 +124,8 @@ class SegmentRecorder {
         // 通知 background.js 分段录制已停止
         chrome.runtime.sendMessage({ type: 'segment_recording_stopped' });
 
-        // 自动合并所有片段
-        await this.mergeSegments();
-
+        // 修复：停止后移除悬浮窗
         this.removeSegmentFloat();
-        this.cleanup();
-    }
-
-    async mergeSegments() {
-        if (this.segments.length === 0) return;
-
-        try {
-            // 创建合并后的文件
-            const mergedBlob = new Blob(this.segments, { type: 'video/webm' });
-            const url = URL.createObjectURL(mergedBlob);
-
-            let title = document.title || 'recorded';
-            if (title.length > 20) title = title.slice(0, 20) + '...';
-            title = title.replace(/[\\/:*?"<>|]/g, '_');
-
-            const now = new Date();
-            const pad = n => n.toString().padStart(2, '0');
-            const timestamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}`;
-
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${title}_完整录制_${timestamp}.webm`;
-            a.click();
-
-            setTimeout(() => URL.revokeObjectURL(url), 10000);
-
-            alert(`录制完成！共 ${this.segments.length} 个片段，已自动合并。`);
-
-        } catch (error) {
-            alert('合并文件失败：' + error.message);
-        }
     }
 
     showSegmentFloat() {

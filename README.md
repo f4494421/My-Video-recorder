@@ -53,6 +53,10 @@ node generate_icons.js
 4. 录制开始后，页面右上角会出现悬浮窗
 5. 点击悬浮窗的"停止"按钮或关闭页面即可保存视频
 
+### 5.补充
+
+![alt text](google设置.png)，如图关闭，实现静默保存。
+
 ## 文件结构
 
 My Video recorder/
