@@ -9,6 +9,7 @@ class SegmentRecorder {
         this.recorder = null;
         this.stream = null;
         this.video = null;
+        this.infoTimer = null;        // 信息更新定时器
     }
 
     async startRecording() {
@@ -217,6 +218,11 @@ class SegmentRecorder {
             document.body.style.userSelect = '';
         }
 
+        // 启动信息更新定时器
+        this.infoTimer = setInterval(() => {
+            this.updateFloatInfo();
+        }, 1000); // 每秒更新一次
+
         // 更新悬浮窗信息
         this.updateFloatInfo();
     }
@@ -242,6 +248,12 @@ class SegmentRecorder {
     removeSegmentFloat() {
         const float = document.getElementById('segment-recorder-float');
         if (float) float.remove();
+
+        // 清除信息更新定时器
+        if (this.infoTimer) {
+            clearInterval(this.infoTimer);
+            this.infoTimer = null;
+        }
     }
 
     cleanup() {
@@ -252,6 +264,12 @@ class SegmentRecorder {
         this.recorder = null;
         this.stream = null;
         this.video = null;
+
+        // 清除定时器
+        if (this.infoTimer) {
+            clearInterval(this.infoTimer);
+            this.infoTimer = null;
+        }
     }
 
     handleError(error) {
