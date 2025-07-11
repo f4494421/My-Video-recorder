@@ -55,7 +55,7 @@ node generate_icons.js
 
 ### 5.补充
 
-![alt text](google设置.png)，如图关闭，实现静默保存。
+![alt text](google设置.png)，如图关闭，实现静默下载保存每段视频。
 
 ## 文件结构
 
@@ -91,7 +91,15 @@ My Video recorder/
 - **录制状态**：红色圆形图标
 - **动态切换**：通过 chrome.action.setIcon 实现
 
-## 配置说明
+## 分段录制说明
+
+- **分段时长**：每段录制时长为 30 分钟，录制满 30 分钟后会自动保存当前片段并开始新一段录制。
+- **分段保存**：每个片段会自动以独立的 WebM 文件保存到本地，文件名包含片段编号和时间戳。
+- **无合并功能**：录制完成后，各片段不会自动合并为一个视频文件。每个片段均为独立文件，需自行管理或后期处理。
+- **操作方式**：
+  - 点击“开始分段录制”按钮启动录制。
+  - 录制过程中可随时点击“停止录制”按钮，当前片段会自动保存，录制结束。
+- **注意事项**：请确保页面上有可用的视频元素，否则无法开始录制。
 
 ### manifest.json 关键配置
 
@@ -108,11 +116,13 @@ json
 
 ### 录制参数
 
-javascript
+```javascript
+const segmentDuration = 30 * 60 * 1000; // 30分钟一段
 const recorder = new MediaRecorder(stream, {
   mimeType: 'video/webm;codecs=vp9',    // 编码格式
   videoBitsPerSecond: 5_000_000         // 视频码率 5Mbps
 });
+```
 
 ## 维护说明
 

@@ -38,7 +38,7 @@ chrome.tabs.query({}, function (tabs) {
     });
 });
 
-// 新增：录制当前标签页按钮
+// 录制当前标签页按钮
 const recordCurrentTabBtn = document.getElementById('recordCurrentTab');
 if (recordCurrentTabBtn) {
     recordCurrentTabBtn.onclick = () => {
@@ -48,31 +48,5 @@ if (recordCurrentTabBtn) {
                 window.close();
             }
         });
-    };
-}
-
-// 新增：检查更新按钮
-const checkUpdateBtn = document.getElementById('checkUpdate');
-if (checkUpdateBtn) {
-    checkUpdateBtn.onclick = () => {
-        chrome.runtime.sendMessage({ type: 'check_update' });
-        checkUpdateBtn.textContent = '检查中...';
-        checkUpdateBtn.disabled = true;
-        setTimeout(() => {
-            checkUpdateBtn.textContent = '检查更新';
-            checkUpdateBtn.disabled = false;
-        }, 3000);
-    };
-}
-
-// 在 popup.js 中添加升级功能
-const manualUpdateBtn = document.getElementById('manualUpdate');
-if (manualUpdateBtn) {
-    manualUpdateBtn.onclick = () => {
-        // 打开Gitee发布页面
-        chrome.tabs.create({
-            url: 'https://gitee.com/mishimengzhong/codeleaner/releases'
-        });
-        window.close();
     };
 }

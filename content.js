@@ -4,7 +4,7 @@ class SegmentRecorder {
         this.segments = [];           // 存储所有片段
         this.currentSegment = 0;      // 当前片段编号
         this.recordingStartTime = 0;  // 总录制开始时间
-        this.segmentDuration = 2 * 60 * 1000; // 2分钟一段 1000毫秒
+        this.segmentDuration = 30 * 60 * 1000; // 30分钟一段 1000毫秒
         this.isRecording = false;
         this.recorder = null;
         this.stream = null;
