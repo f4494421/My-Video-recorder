@@ -1,0 +1,27 @@
+{
+    "manifest_version": 3,
+    "name": "My Video Recorder",
+    "version": "1.0",
+    "description": "录制网页视频的专属插件",
+    "permissions": [
+        "scripting",
+        "activeTab",
+        "notifications"
+    ],
+    "host_permissions": [
+        "<all_urls>"
+    ],
+    "background": {
+        "service_worker": "background.js"
+    },
+    "action": {
+        "default_title": "录制网页视频",
+        "default_popup": "popup.html"
+    },
+    "icons": {
+        "16": "icon_record_16.png",
+        "32": "icon_record_32.png",
+        "48": "icon_record_48.png",
+        "128": "icon_record_128.png"
+    }
+}
