@@ -21,7 +21,7 @@ const stopIcons = {
 const setAction = (tabId, isRecording) => {
     chrome.action.setIcon({
         tabId,
-        path: isRecording ? recordIcons : stopIcons
+        path: isRecording ? stopIcons : recordIcons
     });
     chrome.action.setTitle({
         tabId,
@@ -40,24 +40,22 @@ chrome.runtime.onMessage.addListener((message, sender) => {
                 console.error('注入 content.js 失败:', chrome.runtime.lastError.message);
                 return;
             }
+            // 只显示悬浮窗，不自动开始录制
             chrome.scripting.executeScript({
                 target: { tabId: message.tabId },
-                func: () => window.startSegmentRecording && window.startSegmentRecording()
+                func: () => window.videoRecorder && window.videoRecorder.showRecordingFloat()
             }, results => {
                 if (chrome.runtime.lastError) {
-                    console.error('启动分段录制失败:', chrome.runtime.lastError.message);
+                    console.error('显示录制窗口失败:', chrome.runtime.lastError.message);
                 }
             });
         });
     }
-    if (message.type === 'recorder_started' && sender.tab && sender.tab.id) {
-        setAction(sender.tab.id, false);
-    }
-    if (message.type === 'segment_recording_started' && sender.tab && sender.tab.id) {
-        setAction(sender.tab.id, false);
-    }
-    if (message.type === 'segment_recording_stopped' && sender.tab && sender.tab.id) {
+    if (message.type === 'recording_started' && sender.tab && sender.tab.id) {
         setAction(sender.tab.id, true);
+    }
+    if (message.type === 'recording_stopped' && sender.tab && sender.tab.id) {
+        setAction(sender.tab.id, false);
     }
 });
 

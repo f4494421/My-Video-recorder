@@ -1,20 +1,19 @@
 // 防止重复注入
-if (!window.__segmentRecorderInjected) {
-    window.__segmentRecorderInjected = true;
+if (!window.__videoRecorderInjected) {
+    window.__videoRecorderInjected = true;
 
-    // 分段录制管理器
-    class SegmentRecorder {
+    class VideoRecorder {
         constructor() {
-            this.segments = [];           // 存储所有片段
-            this.currentSegment = 0;      // 当前片段编号
-            this.recordingStartTime = 0;  // 总录制开始时间
-            this.segmentDuration = 30 * 60 * 1000; // 30分钟一段 1000毫秒
+            this.recordingStartTime = 0;
             this.isRecording = false;
             this.recorder = null;
             this.stream = null;
             this.video = null;
-            this.infoTimer = null;        // 信息更新定时器
-            this.autoSave = true; // 自动保存状态，默认开启
+            this.infoTimer = null;
+            this.chunks = [];
+            this.segmentIndex = 0;
+            this.maxSegmentDuration = 30 * 60; // 每段最大时长（秒）
+            this.lastSegmentTime = 0;
         }
 
         async startRecording() {
@@ -28,71 +27,56 @@ if (!window.__segmentRecorderInjected) {
                 this.stream = this.video.captureStream(30);
                 this.recordingStartTime = Date.now();
                 this.isRecording = true;
+                this.chunks = [];
+                this.segmentIndex = 0;
+                this.lastSegmentTime = Date.now();
 
-                // 通知 background.js 分段录制已开始
-                chrome.runtime.sendMessage({ type: 'segment_recording_started' });
+                chrome.runtime.sendMessage({ type: 'recording_started' });
 
-                // 开始第一段录制
-                await this.startSegment();
-
-                // 设置自动分段定时器
-                this.segmentTimer = setInterval(() => this.autoSegment(), this.segmentDuration);
-
-                // 显示分段录制悬浮窗
-                this.showSegmentFloat();
-
-            } catch (error) {
-                alert('启动分段录制失败：' + error.message);
-            }
-        }
-
-        async startSegment() {
-            try {
                 this.recorder = new MediaRecorder(this.stream, {
                     mimeType: 'video/webm;codecs=vp9',
-                    videoBitsPerSecond: 3_000_000 // 降低码率以节省内存
+                    videoBitsPerSecond: 3_000_000
                 });
 
-                const chunks = [];
-
-                this.recorder.ondataavailable = e => chunks.push(e.data);
-
-                this.recorder.onstop = async () => {
-                    const blob = new Blob(chunks, { type: 'video/webm' });
-                    this.segments.push(blob);
-
-                    // 保存当前片段
-                    await this.saveSegment(blob, this.currentSegment);
-
-                    // 如果不是手动停止，继续下一段
-                    if (this.isRecording) {
-                        this.currentSegment++;
-                        await this.startSegment();
+                // 使用 timeslice 实现无缝分段：录制不中断
+                this.recorder.ondataavailable = e => {
+                    if (e.data && e.data.size > 0) {
+                        this.chunks.push(e.data);
+                        
+                        // 检查是否达到分段时间
+                        const now = Date.now();
+                        if (now - this.lastSegmentTime >= this.maxSegmentDuration * 1000) {
+                            this.saveSegment(false);
+                            this.lastSegmentTime = now;
+                        }
                     }
                 };
 
-                this.recorder.start();
-                console.log(`开始录制第 ${this.currentSegment + 1} 段`);
+                this.recorder.onstop = () => {
+                    if (this.chunks.length > 0) {
+                        this.saveSegment(true);
+                    }
+                };
+
+                // 每秒触发一次数据事件，实现无缝录制
+                this.recorder.start(1000);
+                console.log('开始录制');
+
+                this.setupStreamStopListeners();
+                this.showRecordingFloat();
 
             } catch (error) {
-                console.error('启动片段录制失败：', error);
-                this.handleError(error);
+                alert('启动录制失败：' + error.message);
+                this.isRecording = false;
+                this.showRecordingFloat();
             }
         }
 
-        async autoSegment() {
-            if (this.recorder && this.recorder.state === 'recording') {
-                console.log(`自动分段：第 ${this.currentSegment + 1} 段完成`);
-                this.recorder.stop();
-            }
-        }
-
-        async saveSegment(blob, segmentIndex) {
-            if (!this.autoSave) {
-                alert('未自动保存视频片段！');
-                return;
-            }
+        async saveSegment(isFinal) {
             try {
+                if (this.chunks.length === 0) return;
+
+                const blob = new Blob([...this.chunks], { type: 'video/webm' });
                 const url = URL.createObjectURL(blob);
                 let title = document.title || 'recorded';
                 if (title.length > 20) title = title.slice(0, 20) + '...';
@@ -102,15 +86,22 @@ if (!window.__segmentRecorderInjected) {
                 const pad = n => n.toString().padStart(2, '0');
                 const timestamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}`;
 
+                const segmentSuffix = isFinal ? '_final' : `_part${this.segmentIndex.toString().padStart(3, '0')}`;
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `${title}_第${segmentIndex + 1}段_${timestamp}.webm`;
+                a.download = `${title}_${timestamp}${segmentSuffix}.webm`;
                 a.click();
 
                 setTimeout(() => URL.revokeObjectURL(url), 10000);
 
-                // 更新悬浮窗显示
-                this.updateFloatInfo();
+                if (!isFinal) {
+                    this.segmentIndex++;
+                } else {
+                    alert(`录制完成！共生成 ${this.segmentIndex + 1} 个片段`);
+                }
+
+                // 清空缓冲区，继续累积新数据
+                this.chunks = [];
 
             } catch (error) {
                 console.error('保存片段失败：', error);
@@ -120,25 +111,30 @@ if (!window.__segmentRecorderInjected) {
         async stopRecording() {
             this.isRecording = false;
 
-            if (this.segmentTimer) {
-                clearInterval(this.segmentTimer);
-            }
-
             if (this.recorder && this.recorder.state === 'recording') {
                 this.recorder.stop();
             }
 
-            // 通知 background.js 分段录制已停止
-            chrome.runtime.sendMessage({ type: 'segment_recording_stopped' });
+            chrome.runtime.sendMessage({ type: 'recording_stopped' });
 
-            // 修复：停止后移除悬浮窗
-            this.removeSegmentFloat();
+            // 停止计时器
+            if (this.infoTimer) {
+                clearInterval(this.infoTimer);
+                this.infoTimer = null;
+            }
+
+            // 更新UI显示为停止状态
+            this.updateFloatUI();
         }
 
-        showSegmentFloat() {
-            // 创建分段录制专用悬浮窗
+        showRecordingFloat() {
+            if (document.getElementById('video-recorder-float')) {
+                this.updateFloatUI();
+                return;
+            }
+
             const float = document.createElement('div');
-            float.id = 'segment-recorder-float';
+            float.id = 'video-recorder-float';
             float.style.position = 'fixed';
             float.style.top = '30px';
             float.style.right = '30px';
@@ -149,45 +145,15 @@ if (!window.__segmentRecorderInjected) {
             float.style.borderRadius = '12px';
             float.style.boxShadow = '0 4px 24px rgba(0,0,0,0.2)';
             float.style.fontSize = '14px';
-            float.style.minWidth = '280px';
+            float.style.minWidth = '320px';
             float.style.cursor = 'move';
-
-            float.innerHTML = `
-                <div style="margin-bottom:8px;font-weight:bold;color:#4CAF50;display:flex;align-items:center;">
-                    <span>● 分段录制中</span>
-                    <label style="margin-left:16px;font-weight:normal;font-size:13px;display:flex;align-items:center;">
-                        <input type="checkbox" id="autoSaveCheckbox" ${this.autoSave ? 'checked' : ''} style="margin-right:4px;">自动保存
-                    </label>
-                </div>
-                <div id="segment-info" style="margin-bottom:8px;">
-                    <span>当前片段：第 <span id="current-segment">1</span> 段</span>
-                    <span>已保存：<span id="saved-segments">0</span> 个片段</span>
-                    <span>总时长：<span id="total-time">00:00:00</span></span>
-                </div>
-                <button id="stop-segment-btn" style="background:#e53935;color:#fff;border:none;border-radius:4px;padding:6px 12px;cursor:pointer;font-size:12px;">停止录制</button>
-            `;
 
             document.body.appendChild(float);
 
-            // 停止按钮事件
-            document.getElementById('stop-segment-btn').onclick = () => {
-                this.stopRecording();
-            };
-
-            // 自动保存复选框事件
-            const autoSaveCheckbox = document.getElementById('autoSaveCheckbox');
-            if (autoSaveCheckbox) {
-                autoSaveCheckbox.checked = this.autoSave;
-                autoSaveCheckbox.onchange = () => {
-                    this.autoSave = autoSaveCheckbox.checked;
-                };
-            }
-
-            // 拖动功能
             let isDragging = false;
             let offsetX = 0, offsetY = 0;
             float.addEventListener('mousedown', function (e) {
-                if (e.target.id === 'stop-segment-btn') return;
+                if (e.target.tagName === 'BUTTON') return;
                 isDragging = true;
                 offsetX = e.clientX - float.getBoundingClientRect().left;
                 offsetY = e.clientY - float.getBoundingClientRect().top;
@@ -206,75 +172,150 @@ if (!window.__segmentRecorderInjected) {
                 document.body.style.userSelect = '';
             }
 
-            // 启动信息更新定时器
-            this.infoTimer = setInterval(() => this.updateFloatInfo(), 1000); // 每秒更新一次
-
-            // 更新悬浮窗信息
-            this.updateFloatInfo();
+            this.updateFloatUI();
         }
 
-        updateFloatInfo() {
-            const currentSegmentEl = document.getElementById('current-segment');
-            const savedSegmentsEl = document.getElementById('saved-segments');
-            const totalTimeEl = document.getElementById('total-time');
+        updateFloatUI() {
+            const float = document.getElementById('video-recorder-float');
+            if (!float) return;
 
-            if (currentSegmentEl) currentSegmentEl.textContent = this.currentSegment + 1;
-            if (savedSegmentsEl) savedSegmentsEl.textContent = this.segments.length;
+            const pad = n => n.toString().padStart(2, '0');
 
-            // 计算总时长
-            if (totalTimeEl && this.recordingStartTime) {
+            if (this.isRecording) {
+                // 计算录制时长
+                const elapsed = this.recordingStartTime ? Math.floor((Date.now() - this.recordingStartTime) / 1000) : 0;
+                const hours = pad(Math.floor(elapsed / 3600));
+                const minutes = pad(Math.floor((elapsed % 3600) / 60));
+                const seconds = pad(elapsed % 60);
+
+                float.innerHTML = `
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+                        <span style="font-weight:bold;color:#4CAF50;">● 录制中</span>
+                        <span>录制时长：${hours}:${minutes}:${seconds}</span>
+                        <button id="stop-recording-btn" style="background:#e53935;color:#fff;border:none;border-radius:4px;padding:6px 12px;cursor:pointer;font-size:12px;">停止录制</button>
+                    </div>
+                `;
+
+                document.getElementById('stop-recording-btn').onclick = () => {
+                    this.stopRecording();
+                };
+
+                // 启动计时器更新UI
+                if (!this.infoTimer) {
+                    this.infoTimer = setInterval(() => this.updateFloatUI(), 1000);
+                }
+            } else {
+                float.innerHTML = `
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+                        <span style="font-weight:bold;color:#666;">● 未录制</span>
+                        <span>录制时长：00:00:00</span>
+                        <div style="display:flex;gap:8px;">
+                            <button id="start-recording-btn" style="background:#4CAF50;color:#fff;border:none;border-radius:4px;padding:6px 12px;cursor:pointer;font-size:12px;">开始录制</button>
+                            <button id="close-float-btn" style="background:#666;color:#fff;border:none;border-radius:4px;padding:6px 12px;cursor:pointer;font-size:12px;">关闭</button>
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('start-recording-btn').onclick = () => {
+                    this.startRecording();
+                };
+
+                document.getElementById('close-float-btn').onclick = () => {
+                    this.removeRecordingFloat();
+                };
+            }
+        }
+
+        updateRecordingInfo() {
+            const timeEl = document.getElementById('recording-time');
+            if (timeEl && this.recordingStartTime) {
                 const totalSeconds = Math.floor((Date.now() - this.recordingStartTime) / 1000);
                 const hours = Math.floor(totalSeconds / 3600);
                 const minutes = Math.floor((totalSeconds % 3600) / 60);
                 const seconds = totalSeconds % 60;
-                totalTimeEl.textContent = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                timeEl.textContent = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
             }
         }
 
-        removeSegmentFloat() {
-            const float = document.getElementById('segment-recorder-float');
+        removeRecordingFloat() {
+            const float = document.getElementById('video-recorder-float');
             if (float) float.remove();
 
-            // 清除信息更新定时器
             if (this.infoTimer) {
                 clearInterval(this.infoTimer);
                 this.infoTimer = null;
             }
         }
 
+        setupStreamStopListeners() {
+            this.stream.addEventListener('inactive', () => {
+                if (this.isRecording) {
+                    console.log('视频流已中断，自动停止录制');
+                    this.stopRecording();
+                }
+            });
+
+            this.video.addEventListener('ended', () => {
+                if (this.isRecording) {
+                    console.log('视频播放结束，自动停止录制');
+                    this.stopRecording();
+                }
+            });
+
+            this.videoObserver = new MutationObserver((mutations) => {
+                for (const mutation of mutations) {
+                    if (mutation.removedNodes.length > 0) {
+                        for (const node of mutation.removedNodes) {
+                            if (node === this.video) {
+                                if (this.isRecording) {
+                                    console.log('视频元素已移除，自动停止录制');
+                                    this.stopRecording();
+                                }
+                                this.videoObserver.disconnect();
+                                return;
+                            }
+                        }
+                    }
+                }
+            });
+
+            this.videoObserver.observe(document.body, { childList: true, subtree: true });
+        }
+
         cleanup() {
-            this.segments = [];
-            this.currentSegment = 0;
             this.recordingStartTime = 0;
             this.isRecording = false;
             this.recorder = null;
             this.stream = null;
             this.video = null;
+            this.chunks = [];
+            this.segmentIndex = 0;
 
-            // 清除定时器
             if (this.infoTimer) {
                 clearInterval(this.infoTimer);
                 this.infoTimer = null;
             }
+
+            if (this.videoObserver) {
+                this.videoObserver.disconnect();
+                this.videoObserver = null;
+            }
         }
 
         handleError(error) {
-            console.error('分段录制错误：', error);
+            console.error('录制错误：', error);
             alert('录制过程中发生错误：' + error.message);
             this.stopRecording();
         }
     }
 
-    // 创建全局分段录制实例
-    window.segmentRecorder = new SegmentRecorder();
+    window.videoRecorder = new VideoRecorder();
 
-    // 开始分段录制
-    window.startSegmentRecording = () => {
-        window.segmentRecorder.startRecording();
+    window.startRecording = () => {
+        window.videoRecorder.startRecording();
     };
 
-    // 停止分段录制
-    window.stopSegmentRecording = () => {
-        window.segmentRecorder.stopRecording();
+    window.stopRecording = () => {
+        window.videoRecorder.stopRecording();
     };
 }
