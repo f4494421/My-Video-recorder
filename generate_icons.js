@@ -1,4 +1,17 @@
-const { createCanvas } = require('canvas');
+let createCanvas;
+try {
+    ({ createCanvas } = require('canvas'));
+} catch (e) {
+    console.error('缺少 canvas 模块，无法生成图标。');
+    console.error('');
+    console.error('安装方法（二选一）：');
+    console.error('  1. npm install --save-dev canvas');
+    console.error('     （需要 Visual Studio 2022 + "Desktop development with C++" 工作负载）');
+    console.error('  2. 使用在线工具手动生成 16/32/48/128 尺寸的 PNG 图标');
+    console.error('');
+    console.error('当前图标文件已存在，无需重新生成即可正常使用扩展。');
+    process.exit(1);
+}
 const fs = require('fs');
 
 const drawCircle = (size, filename) => {

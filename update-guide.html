@@ -2,14 +2,8 @@
 <html lang="zh-CN">
 
 <head>
-    <meta charse <div class="step">
-    <h3>版本4.0.0 - 重要变更</h3>
-    <ul>
-        <li>简化录制功能，移除分段录制</li>
-        <li>一键录制，自动保存完整视频文件</li>
-        <li>界面更简洁，操作更便捷</li>
-    </ul>
-    </div>">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>升级指南</title>
     <style>
         body {
@@ -40,8 +34,20 @@
     <h1>My Video Recorder 升级指南</h1>
 
     <div class="version-info">
-        <h3>最新版本：v4.0.0</h3>
+        <h3>最新版本：v4.1.0</h3>
         <p>修复部分兼容性和语法问题，提升稳定性。</p>
+    </div>
+
+    <h2>版本变更</h2>
+
+    <div class="step">
+        <h3>版本4.1.0 - 重要变更</h3>
+        <ul>
+            <li>修复兼容性和语法问题，提升稳定性</li>
+            <li>优化悬浮窗交互体验，使用 toast 替代弹窗</li>
+            <li>修复事件监听器内存泄露问题</li>
+            <li>支持无缝分段录制（每30分钟自动保存）</li>
+        </ul>
     </div>
 
     <h2>升级步骤</h2>
@@ -56,7 +62,7 @@
         <ol>
             <li>打开 Chrome 浏览器</li>
             <li>进入 chrome://extensions/</li>
-            <li>找到 "My Video Recorder" 并点击“删除”</li>
+            <li>找到 "My Video Recorder" 并点击"删除"</li>
         </ol>
     </div>
 
@@ -64,7 +70,7 @@
         <h3>步骤3：安装新版本</h3>
         <ol>
             <li>解压下载的文件</li>
-            <li>在 chrome://extensions/ 页面点击“加载已解压的扩展程序”</li>
+            <li>在 chrome://extensions/ 页面点击"加载已解压的扩展程序"</li>
             <li>选择解压后的文件夹</li>
         </ol>
     </div>
@@ -73,7 +79,7 @@
         <h3>分段录制说明（重要变更）</h3>
         <ul>
             <li>每段录制时长为 <b>30 分钟</b>，自动保存为独立视频文件</li>
-            <li>可在悬浮窗关闭“自动保存”用于调试</li>
+            <li>可在悬浮窗关闭"自动保存"用于调试</li>
             <li>录制完成后不会自动合并所有片段</li>
         </ul>
     </div>

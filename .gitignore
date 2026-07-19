@@ -1,0 +1,34 @@
+# 依赖目录
+node_modules/
+
+# 工具二进制文件和大文件
+tools/mkvtoolnix/
+tools/mkvtoolnix.7z
+tools/mkvtoolnix.zip
+tools/ffmpeg/
+tools/ffmpeg_logs/*.mp4
+
+# 日志文件
+*.log
+tools/mkvtoolnix_logs/
+tools/ffmpeg_logs/
+
+# 系统文件
+Thumbs.db
+.DS_Store
+Desktop.ini
+
+# IDE 配置
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 环境变量
+.env
+.env.local
+
+# 打包输出
+dist/
+build/
+*.zip

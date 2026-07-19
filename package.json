@@ -1,6 +1,17 @@
 {
-  "dependencies": {
-    "canvas": "^3.1.2",
-    "sharp": "^0.34.2"
-  }
+  "name": "my-video-recorder",
+  "version": "4.1.0",
+  "description": "录制网页视频的专属 Chrome 插件",
+  "private": true,
+  "scripts": {
+    "generate-icons": "node generate_icons.js",
+    "fix-webm": "node tools/fix_webm.js"
+  },
+  "keywords": [
+    "chrome-extension",
+    "video-recorder",
+    "screen-recorder"
+  ],
+  "author": "mishimengzhong",
+  "license": "MIT"
 }

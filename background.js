@@ -1,5 +1,7 @@
 // 后台脚本：处理图标切换和消息通信
 
+const recordingTabs = new Set();
+
 const recordIcons = {
     16: 'icon_record_16.png',
     32: 'icon_record_32.png',
@@ -52,13 +54,23 @@ chrome.runtime.onMessage.addListener((message, sender) => {
         });
     }
     if (message.type === 'recording_started' && sender.tab && sender.tab.id) {
+        recordingTabs.add(sender.tab.id);
         setAction(sender.tab.id, true);
     }
     if (message.type === 'recording_stopped' && sender.tab && sender.tab.id) {
+        recordingTabs.delete(sender.tab.id);
         setAction(sender.tab.id, false);
     }
 });
 
 chrome.runtime.onInstalled.addListener(() => {
     // 可选：初始化其它本地存储
+});
+
+// 页面刷新时，内容脚本上下文被销毁，重置图标状态
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+    if (changeInfo.status === 'loading' && recordingTabs.has(tabId)) {
+        recordingTabs.delete(tabId);
+        setAction(tabId, false);
+    }
 });

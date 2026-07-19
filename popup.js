@@ -1,7 +1,14 @@
-// 获取所有标签页，筛选含有<video>的页面
-chrome.tabs.query({}, (tabs) => {
-    const checkPromises = tabs.map(tab => new Promise(resolve => {
-        // 只处理 http(s)/file 协议的页面
+const MAX_TABS_TO_SCAN = 50;
+
+const tabList = document.getElementById('tabList');
+if (tabList) {
+    tabList.innerHTML = '<li class="tab-item" style="cursor:default;color:#888;">正在扫描标签页...</li>';
+}
+
+chrome.tabs.query({ currentWindow: true }, (tabs) => {
+    const tabsToScan = tabs.slice(0, MAX_TABS_TO_SCAN);
+
+    const checkPromises = tabsToScan.map(tab => new Promise(resolve => {
         if (!/^https?:|^file:/.test(tab.url)) {
             resolve({ tab, hasVideo: false });
             return;
@@ -14,30 +21,48 @@ chrome.tabs.query({}, (tabs) => {
             }
         }, (results) => {
             if (chrome.runtime.lastError) {
-                console.log('无法访问标签页:', tab.url, chrome.runtime.lastError.message);
                 resolve({ tab, hasVideo: false });
                 return;
             }
             resolve({ tab, hasVideo: results && results[0] && results[0].result.hasVideo });
         });
     }));
+
     Promise.all(checkPromises).then(results => {
         const videoTabs = results.filter(r => r.hasVideo);
-        const tabList = document.getElementById('tabList');
+        const listEl = document.getElementById('tabList');
+        if (!listEl) return;
+        listEl.innerHTML = '';
+
+        if (videoTabs.length === 0) {
+            const li = document.createElement('li');
+            li.className = 'tab-item';
+            li.style.cursor = 'default';
+            li.style.color = '#888';
+            li.textContent = '未检测到含有视频的标签页';
+            listEl.appendChild(li);
+            return;
+        }
+
         videoTabs.forEach(({ tab }) => {
             const li = document.createElement('li');
             li.className = 'tab-item';
-            li.innerHTML = `<div class="tab-title">${tab.title}</div>`;
+            li.innerHTML = `<div class="tab-title">${escapeHtml(tab.title)}</div>`;
             li.onclick = () => {
                 chrome.runtime.sendMessage({ type: 'start_record_on_tab', tabId: tab.id });
                 window.close();
             };
-            tabList.appendChild(li);
+            listEl.appendChild(li);
         });
     });
 });
 
-// 录制当前标签页按钮
+function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
 const recordCurrentTabBtn = document.getElementById('recordCurrentTab');
 if (recordCurrentTabBtn) {
     recordCurrentTabBtn.onclick = () => {
