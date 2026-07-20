@@ -1,12 +1,14 @@
 {
     "manifest_version": 3,
     "name": "My Video Recorder",
-    "version": "4.1.0",
+    "version": "4.3.0",
     "description": "录制网页视频的专属插件",
     "permissions": [
         "scripting",
         "activeTab",
-        "storage"
+        "storage",
+        "tabCapture",
+        "downloads"
     ],
     "host_permissions": [
         "<all_urls>"

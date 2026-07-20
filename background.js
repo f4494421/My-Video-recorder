@@ -1,4 +1,5 @@
-// 后台脚本：处理图标切换和消息通信
+// 后台脚本：处理图标切换、消息通信、整页录屏
+// MV3 中使用 chrome.tabCapture.getMediaStreamId()（旧的 capture() 已废弃）
 
 const recordingTabs = new Set();
 
@@ -15,11 +16,6 @@ const stopIcons = {
     128: 'icon_stop_128.png'
 };
 
-/**
- * 设置扩展图标和标题
- * @param {number} tabId
- * @param {boolean} isRecording
- */
 const setAction = (tabId, isRecording) => {
     chrome.action.setIcon({
         tabId,
@@ -31,8 +27,9 @@ const setAction = (tabId, isRecording) => {
     });
 };
 
-// 监听 popup.js 的消息，指定 tabId 开始录屏
-chrome.runtime.onMessage.addListener((message, sender) => {
+// 监听 content.js 与 popup.js 的消息
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    // ── popup 点击开始录制：注入 content.js 并显示浮动窗 ──
     if (message.type === 'start_record_on_tab' && message.tabId) {
         chrome.scripting.executeScript({
             target: { tabId: message.tabId },
@@ -42,7 +39,6 @@ chrome.runtime.onMessage.addListener((message, sender) => {
                 console.error('注入 content.js 失败:', chrome.runtime.lastError.message);
                 return;
             }
-            // 只显示悬浮窗，不自动开始录制
             chrome.scripting.executeScript({
                 target: { tabId: message.tabId },
                 func: () => window.videoRecorder && window.videoRecorder.showRecordingFloat()
@@ -53,6 +49,42 @@ chrome.runtime.onMessage.addListener((message, sender) => {
             });
         });
     }
+
+    // ── tabCapture 整页录屏：获取 streamId，交给 content script 消费 ──
+    if (message.type === 'start_tab_capture') {
+        const tabId = sender.tab && sender.tab.id;
+        if (!tabId) {
+            sendResponse({ error: '无法获取 tabId' });
+            return true;
+        }
+        try {
+            // MV3 正确 API：getMediaStreamId
+            if (typeof chrome.tabCapture?.getMediaStreamId === 'function') {
+                chrome.tabCapture.getMediaStreamId({
+                    consumerTabId: tabId,
+                    targetTabId: tabId
+                }, (streamId) => {
+                    if (chrome.runtime.lastError) {
+                        console.error('getMediaStreamId 失败：', chrome.runtime.lastError.message);
+                        sendResponse({ error: chrome.runtime.lastError.message, fallback: true });
+                    } else if (!streamId) {
+                        sendResponse({ error: '未获取到 streamId', fallback: true });
+                    } else {
+                        sendResponse({ success: true, streamId });
+                    }
+                });
+            } else {
+                // getMediaStreamId 也不可用，让 content script 回退到 getDisplayMedia
+                sendResponse({ error: '当前浏览器不支持 tabCapture API', fallback: true });
+            }
+        } catch (err) {
+            console.error('tabCapture 出错：', err);
+            sendResponse({ error: err.message, fallback: true });
+        }
+        return true; // 异步响应
+    }
+
+    // ── 常规录制状态标记 ──
     if (message.type === 'recording_started' && sender.tab && sender.tab.id) {
         recordingTabs.add(sender.tab.id);
         setAction(sender.tab.id, true);
@@ -67,10 +99,14 @@ chrome.runtime.onInstalled.addListener(() => {
     // 可选：初始化其它本地存储
 });
 
-// 页面刷新时，内容脚本上下文被销毁，重置图标状态
+// 页面刷新/关闭时，重置录制状态
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     if (changeInfo.status === 'loading' && recordingTabs.has(tabId)) {
         recordingTabs.delete(tabId);
         setAction(tabId, false);
     }
+});
+
+chrome.tabs.onRemoved.addListener((tabId) => {
+    recordingTabs.delete(tabId);
 });

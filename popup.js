@@ -74,3 +74,56 @@ if (recordCurrentTabBtn) {
         });
     };
 }
+
+/**
+ * 整页录屏（从 popup 触发，拥有扩展用户手势，tabCapture 方案可工作）
+ * 先在目标标签页注入 content.js 并显示浮动面板，然后把 streamId 传过去
+ */
+const recordWholePageBtn = document.getElementById('recordWholePage');
+if (recordWholePageBtn) {
+    recordWholePageBtn.onclick = () => {
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            if (!tabs || !tabs[0]) return;
+            const targetTabId = tabs[0].id;
+            // 先注入 content.js 并显示浮动面板，再由 popup 直接调用 tabCapture 把 streamId 交给 content script
+            chrome.scripting.executeScript({
+                target: { tabId: targetTabId },
+                files: ['content.js']
+            }, () => {
+                // 显示浮动面板
+                chrome.scripting.executeScript({
+                    target: { tabId: targetTabId },
+                    func: () => window.videoRecorder && window.videoRecorder.showRecordingFloat()
+                }, () => {
+                    // ✅ 从 popup（带扩展用户手势）调用 tabCapture 获取 streamId
+                    // —— 只会用 tabCapture，绝不对接 getDisplayMedia，避免出现共享提示条
+                    chrome.tabCapture.getMediaStreamId(
+                        { consumerTabId: targetTabId, targetTabId: targetTabId },
+                        (streamId) => {
+                            if (chrome.runtime.lastError || !streamId) {
+                                // tabCapture 失败：不回退到 getDisplayMedia（会出现共享提示条）
+                                // 直接在页面显示明确的错误信息
+                                chrome.scripting.executeScript({
+                                    target: { tabId: targetTabId },
+                                    func: () => {
+                                        if (window.videoRecorder) {
+                                            window.videoRecorder.showToast('整页录屏未授权，请刷新页面后从扩展图标点击"整页录屏"重试', 8000);
+                                        }
+                                    }
+                                });
+                                return;
+                            }
+                            // ✅ 拿到有效 streamId —— 交给 content script，用 getUserMedia 消费（无共享提示条）
+                            chrome.scripting.executeScript({
+                                target: { tabId: targetTabId },
+                                func: (id) => window.videoRecorder && window.videoRecorder.startTabCaptureRecording(id),
+                                args: [streamId]
+                            });
+                        }
+                    );
+                });
+            });
+            window.close();
+        });
+    };
+}

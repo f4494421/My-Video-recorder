@@ -1,6 +1,6 @@
 {
   "name": "my-video-recorder",
-  "version": "4.1.0",
+  "version": "4.3.0",
   "description": "录制网页视频的专属 Chrome 插件",
   "private": true,
   "scripts": {
